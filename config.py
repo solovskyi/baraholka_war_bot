@@ -20,15 +20,10 @@ AD_PUBLISHED_STORAGE = {}
 PUBLISHED_DATA_FILE = 'published_posts.json'
 
 # !!! ВСТАВЬТЕ СВОИ ДАННЫЕ СЮДА !!!
-# Токен бота берется из переменной окружения TELEGRAM_BOT_TOKEN в файле .env
-TOKEN = os.getenv("TELEGRAM_BOT_TOKEN") 
-
-# НОВЫЕ ИЗМЕНЕНИЯ: Загружаем ID чатов/каналов из .env и преобразуем в int
-# ID Вашей приватной группы (модерация)
-MODERATION_CHAT_ID = int(os.getenv("MODERATION_CHAT_ID")) 
-# ID целевого маркетплейса
+TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
+MODERATION_CHAT_ID = int(os.getenv("MODERATION_CHAT_ID"))
 TARGET_CHANNEL_ID = int(os.getenv("TARGET_CHANNEL_ID")) 
-# !!! КОНЕЦ ВСТАВКИ !!!
+GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
 
 WATERMARK_TEXT = "Базар Варшава 🛍️" # Текст водяного знака
 MAX_PHOTOS = 10 # Максимальное количество фото
