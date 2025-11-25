@@ -3,12 +3,22 @@
 from io import BytesIO
 from PIL import Image, ImageDraw, ImageFont 
 import logging
+import os # <-- ДОДАНО ДЛЯ РОБОТИ З АБСОЛЮТНИМИ ШЛЯХАМИ
 
 # --- КОНСТАНТЫ ВОТЕРМАРКА ---
-WATERMARK_TEXT = "Базар Варшава" # <-- ИСПОЛЬЗУЙТЕ СВОЙ ТЕКСТ ЗДЕСЬ
-WATERMARK_OPACITY = 120 # Прозрачность вотермарка (0-255). 120 - средняя видимость.
-# ВАЖНО: ДЛЯ КИРИЛЛИЦЫ НУЖЕН TTF ШРИФТ. Укажите путь к нему.
-FONT_PATH = "assets/Roboto.ttf" # <-- ИЗМЕНИТЬ НА ВАШ ПУТЬ И ИМЯ ФАЙЛА 
+WATERMARK_TEXT = "Базар Варшава" 
+WATERMARK_OPACITY = 120 
+
+# --- ОПРЕДЕЛЕНИЕ АБСОЛЮТНОГО ПУТИ К ШРИФТУ ---
+# 1. Получаем путь к текущему файлу (utils.py)
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
+# 2. Строим полный путь: /home/USERNAME/baraholka_war_bot/assets/Roboto.ttf
+FONT_PATH = os.path.join(BASE_DIR, "assets", "Roboto.ttf")
+
+# --- ПРОВЕРКА ДЛЯ ЛОГГИРОВАНИЯ (Необязательно, но полезно) ---
+if not os.path.exists(FONT_PATH):
+    logging.warning(f"Шрифт не найден по пути: {FONT_PATH}")
 
 async def apply_watermark(bot, file_id):
     """
@@ -31,9 +41,8 @@ async def apply_watermark(bot, file_id):
     # 2. Открытие изображения
     try:
         img = Image.open(photo_buffer)
-        img = img.convert("RGBA") # Преобразуем для работы с прозрачностью
+        img = img.convert("RGBA")
     except Exception as e:
-        # Если не удалось открыть изображение, возвращаем исходный (необработанный) буфер
         logging.error(f"Ошибка открытия изображения: {e}")
         photo_buffer.seek(0) 
         return photo_buffer
@@ -51,19 +60,16 @@ async def apply_watermark(bot, file_id):
         font_size = 20
         
     try:
-        if FONT_PATH:
-            # Используем TrueType шрифт (требуется для кириллицы)
-            font = ImageFont.truetype(FONT_PATH, font_size) 
-        else:
-            # Используем шрифт по умолчанию (может не поддерживать кириллицу)
-            font = ImageFont.load_default(size=font_size) 
-    except (IOError, OSError):
+        # Теперь FONT_PATH всегда является абсолютным путем
+        font = ImageFont.truetype(FONT_PATH, font_size) 
+    except (IOError, OSError) as e:
         # Fallback, если TrueType шрифт не найден или путь неверный
+        logging.error(f"Ошибка загрузки TrueType шрифта: {e}. Используется шрифт по умолчанию.")
         font = ImageFont.load_default(size=font_size)
         
     # Рассчет положения текста (правый нижний угол с отступами)
-    padding_x = int(width * 0.02) # 2% от ширины
-    padding_y = int(height * 0.02) # 2% от высоты
+    padding_x = int(width * 0.02)
+    padding_y = int(height * 0.02)
     
     x = width - padding_x
     y = height - padding_y
@@ -81,10 +87,9 @@ async def apply_watermark(bot, file_id):
     output_buffer = BytesIO()
     
     # Сохраняем в JPEG для совместимости с MediaGroup и уменьшения размера
-    img = img.convert("RGB") # Удаляем альфа-канал перед сохранением в JPEG
+    img = img.convert("RGB")
     img.save(output_buffer, format="JPEG", quality=90) 
     
-    # ГАРАНТИЯ: Сброс курсора в начало буфера перед возвратом
     output_buffer.seek(0)
     
     return output_buffer
