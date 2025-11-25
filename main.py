@@ -28,7 +28,8 @@ from keyboards import (
     get_moderation_keyboard, main_menu_return_keyboard,
     adv_contact_keyboard,
     get_user_posts_keyboard, 
-    get_delete_confirmation_keyboard 
+    get_delete_confirmation_keyboard,
+    ad_rejection_keyboard # Новая клавиатура для редиректа на рекламу
 )
 from utils import apply_watermark 
 
@@ -252,30 +253,74 @@ async def cmd_start_or_callback(callback_or_message: types.CallbackQuery | types
     await message.answer(welcome_text, reply_markup=main_menu_keyboard, parse_mode="HTML")
 
 
+# --- ХЕНДЛЕР: ЗАКАЗ РЕКЛАМЫ (С ВОССТАНОВЛЕННЫМ ПРАЙСОМ) ---
+
 @dp.callback_query(F.data == "info_adv") 
 async def handle_order_ad(callback: CallbackQuery, state: FSMContext):
+    """Показывает информацию о размещении рекламы."""
     await callback.answer()
+    
     await state.clear()
-    try: await callback.message.delete()
-    except: pass
+    try:
+        await callback.message.delete()
+    except Exception:
+        pass
 
+    # 🔥 ВОССТАНОВЛЕННЫЙ ТЕКСТ С ЦЕНАМИ 🔥
     adv_text = (
         "📣 Разместить рекламу\n\n"
-        "Продвигайте свои товары и услуги в Базар Варшава 🛍️!\n"
-        "📩 По вопросам размещения пишите: @foxtyro"
+        "Продвигайте свои товары и услуги в Базар Варшава 🛍️ — быстро, удобно и эффективно!\n\n"
+        "📌 Закрепление вашей публикации в любом разделе\n"
+        "🗓 На 1 неделю — 50 zł\n"
+        "📆 На 1 месяц — 150 zł\n\n"
+        "🌐 Продвижение внешних ресурсов\n"
+        "(Telegram-каналы, Instagram и другие платформы)\n"
+        "🗓 Неделя в закрепе — 150 zł\n"
+        "📆 Месяц в закрепе — 300 zł\n\n"
+        "🛠️ Размещение в разделе «Услуги»\n"
+        "📝 1 публикация — 25 zł\n"
+        "➤ Пост остаётся навсегда.\n\n"
+        "📩 По вопросам размещения рекламы пишите:\n"
+        "@foxtyro\n\n"
+        "✨ Пусть о вас узнают те, кому это важно!"
     )
-    await callback.message.answer(adv_text, reply_markup=adv_contact_keyboard, parse_mode="HTML")
+    # 🔥 КОНЕЦ ВОССТАНОВЛЕННОГО БЛОКА 🔥
+    
+    await callback.message.answer(
+        adv_text,
+        reply_markup=adv_contact_keyboard,
+        parse_mode="HTML"
+    )
 
+
+# --- ХЕНДЛЕР: ПОДДЕРЖКА (ВОССТАНОВЛЕННЫЙ ТЕКСТ) ---
 
 @dp.callback_query(F.data == "info_support") 
 async def handle_support(callback: CallbackQuery, state: FSMContext):
+    """Показывает контактную информацию службы поддержки."""
     await callback.answer()
+    
     await state.clear()
-    try: await callback.message.delete()
-    except: pass
+    try:
+        await callback.message.delete()
+    except Exception:
+        pass
 
-    support_text = "🛠️ Служба поддержки\n\n📩 Напишите администратору: @foxtyro"
-    await callback.message.answer(support_text, reply_markup=adv_contact_keyboard, parse_mode="HTML")
+    # 🔥 ВОССТАНОВЛЕННЫЙ ТЕКСТ ПОДДЕРЖКИ 🔥
+    support_text = (
+        "🛠️ Служба поддержки\n\n"
+        "Если у вас возникли вопросы, связанные с работой бота, модерацией, оплатой или техническими проблемами:\n\n"
+        "📩 Напишите нашему администратору:\n"
+        "@foxtyro\n\n"
+        "Мы постараемся ответить максимально быстро!"
+    )
+    # 🔥 КОНЕЦ ВОССТАНОВЛЕННОГО БЛОКА 🔥
+    
+    await callback.message.answer(
+        support_text,
+        reply_markup=adv_contact_keyboard, 
+        parse_mode="HTML"
+    )
 
 
 # --- УДАЛЕНИЕ ПОСТА ---
@@ -289,7 +334,7 @@ async def handle_delete_start(callback: CallbackQuery, state: FSMContext):
         
     posts = AD_PUBLISHED_STORAGE.get(user_id, [])
     if not posts:
-        await callback.message.answer("❌ У вас нет активных объявлений.", reply_markup=main_menu_return_keyboard)
+        await callback.message.answer("❌ У вас нет активных опубликованных объявлений.", reply_markup=main_menu_return_keyboard)
         return
 
     post_keyboard = get_user_posts_keyboard(user_id, AD_PUBLISHED_STORAGE)
@@ -535,12 +580,20 @@ async def handle_final_publish(callback: CallbackQuery, state: FSMContext):
 
     # --- СЦЕНАРИЙ А: ОТКЛОНЕНО ---
     if decision == "reject":
+        
+        # ЛОГИКА ВЫБОРА КЛАВИАТУРЫ ДЛЯ РЕДИРЕКТА НА РЕКЛАМУ
+        keyboard_to_use = main_menu_return_keyboard
+        
+        # Если ИИ отклонил из-за рекламы/услуг
+        if "реклама услуг" in reason.lower() or "услуги платная" in reason.lower():
+             keyboard_to_use = ad_rejection_keyboard
+
         await callback.message.answer(
             f"❌ <b>Ваше объявление отклонено системой модерации.</b>\n\n"
             f"⚠️ <b>Причина:</b> {reason}\n\n"
             f"Пожалуйста, исправьте и попробуйте снова.",
             parse_mode="HTML",
-            reply_markup=main_menu_return_keyboard
+            reply_markup=keyboard_to_use
         )
         await state.clear()
         return
@@ -567,8 +620,6 @@ async def handle_final_publish(callback: CallbackQuery, state: FSMContext):
         return
 
     # --- СЦЕНАРИЙ В: РУЧНАЯ ПРОВЕРКА (ЕСЛИ ИИ НЕ УВЕРЕН) ---
-    # Если decision == "manual", отправляем админам
-    
     ad_id = str(int(time.time())) 
     AD_PENDING_STORAGE[ad_id] = ad_data 
 
@@ -623,7 +674,6 @@ async def handle_final_publish(callback: CallbackQuery, state: FSMContext):
 
 @dp.callback_query(F.data.startswith("approve_"))
 async def admin_approve_ad(callback: CallbackQuery):
-    """РУЧНОЕ одобрение админом (для тех случаев, когда ИИ отправил на manual)."""
     await callback.answer("Одобрено!")
     ad_id = callback.data.split("_")[1]
     ad_data = AD_PENDING_STORAGE.get(ad_id)
@@ -631,13 +681,11 @@ async def admin_approve_ad(callback: CallbackQuery):
     if not ad_data:
         return await callback.message.edit_text(f"❌ Не найдено {ad_id}")
 
-    # Используем ту же функцию публикации
     success, result = await publish_post_to_channel(bot, ad_data)
     
     new_text = callback.message.text + "\n\n"
     if success:
         new_text += "✅ ОПУБЛИКОВАНО"
-        # Уведомление юзера
         try:
             clean_channel_id = str(TARGET_CHANNEL_ID)[4:] if str(TARGET_CHANNEL_ID).startswith("-100") else str(TARGET_CHANNEL_ID)
             post_link = f"https://t.me/c/{clean_channel_id}/{result[0]}"

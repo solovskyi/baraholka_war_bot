@@ -1,9 +1,9 @@
 # keyboards.py
 
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
-from config import AD_PUBLISHED_STORAGE # Требуется импорт для динамических функций
+from config import AD_PUBLISHED_STORAGE 
 
-# --- 1. Основное Меню (Главное Меню) ---
+# --- 1. Основное Меню ---
 
 main_menu_keyboard = InlineKeyboardMarkup(inline_keyboard=[
     [
@@ -18,11 +18,11 @@ main_menu_keyboard = InlineKeyboardMarkup(inline_keyboard=[
         InlineKeyboardButton(text="📣 Заказать рекламу", callback_data="info_adv")
     ],
     [
-        InlineKeyboardButton(text="🗑️ Удалить пост", callback_data="info_delete") # Callback для старта удаления
+        InlineKeyboardButton(text="🗑️ Удалить пост", callback_data="info_delete")
     ]
 ])
 
-# --- 2. Клавиатура Категорий ---
+# --- 2. Категории ---
 category_keyboard = InlineKeyboardMarkup(inline_keyboard=[
     [InlineKeyboardButton(text="🚗 Автомобили • Запчасти", callback_data="cat_auto")],
     [InlineKeyboardButton(text="🚲 Велосипеды • Самокаты", callback_data="cat_bicycle")], 
@@ -40,38 +40,44 @@ category_keyboard = InlineKeyboardMarkup(inline_keyboard=[
     [InlineKeyboardButton(text="🔙 Назад", callback_data="start")]
 ])
 
-# --- 3. Клавиатура для Фото-шага (Начало) ---
+# --- 3. Фото ---
 photo_step_keyboard = InlineKeyboardMarkup(inline_keyboard=[
     [InlineKeyboardButton(text="📸 Начать загрузку фото", callback_data="photo_continue")],
     [InlineKeyboardButton(text="➡️ Пропустить этот шаг", callback_data="photo_skip")]
 ])
 
-# --- 4. Клавиатура для пропуска контактов ---
+# --- 4. Контакты ---
 skip_contact_keyboard = InlineKeyboardMarkup(inline_keyboard=[
     [InlineKeyboardButton(text="➡️ Пропустить", callback_data="contact_skip")]
 ])
 
-# --- 5. Клавиатура финального превью ---
+# --- 5. Превью ---
 final_preview_keyboard = InlineKeyboardMarkup(inline_keyboard=[
     [InlineKeyboardButton(text="✅ Опубликовать", callback_data="final_publish")],
     [InlineKeyboardButton(text="✏️ Редактировать текст", callback_data="final_edit_text")],
     [InlineKeyboardButton(text="❌ Отмена и Главное меню", callback_data="final_cancel")]
 ])
 
-# --- 6. Вспомогательные клавиатуры ---
+# --- 6. Вспомогательные ---
 main_menu_return_keyboard = InlineKeyboardMarkup(inline_keyboard=[
     [InlineKeyboardButton(text="🏠 На главную", callback_data="start")]
 ])
 
-# --- 7. Клавиатура модератора ---
+# 🔥 КЛАВИАТУРА ДЛЯ ПЕРЕНАПРАВЛЕНИЯ НА РЕКЛАМУ 🔥
+ad_rejection_keyboard = InlineKeyboardMarkup(inline_keyboard=[
+    [InlineKeyboardButton(text="📣 Узнать цены на рекламу", callback_data="info_adv")],
+    [InlineKeyboardButton(text="🏠 На главную", callback_data="start")]
+])
+# ------------------------------------------------
+
+# --- 7. Модерация ---
 def get_moderation_keyboard(ad_id):
-    """Генерирует клавиатуру с кнопками Одобрить/Отклонить для модератора."""
     return InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text="✅ Одобрить", callback_data=f"approve_{ad_id}")],
         [InlineKeyboardButton(text="❌ Отклонить", callback_data=f"reject_{ad_id}")]
     ])
 
-# --- 8. Клавиатура для рекламы/поддержки ---
+# --- 8. Реклама (контакт) ---
 adv_contact_keyboard = InlineKeyboardMarkup(inline_keyboard=[
     [
         InlineKeyboardButton(
@@ -87,65 +93,39 @@ adv_contact_keyboard = InlineKeyboardMarkup(inline_keyboard=[
     ]
 ])
 
-# --- 9. Функции для управления постами (УДАЛЕНИЕ) ---
+# --- 9. Удаление ---
 
 def get_user_posts_keyboard(user_id: int, published_storage: dict) -> InlineKeyboardMarkup:
-    """Генерирует клавиатуру со списком постов пользователя для удаления."""
     posts = published_storage.get(user_id, [])
-    
     buttons = []
-    
-    # Ключевые префиксы, которые нужно игнорировать в описании
     PREFIXES_TO_IGNORE = ('🛒 #КУПЛЮ', '🎁 #ОТДАМ_ДАРОМ', '👤 @', '📞 ', 'Базар Варшава')
 
     for i, post in enumerate(posts):
         full_desc = post.get('description', f"Объявление #{post.get('msg_id', i+1)}")
-        
         display_text = "Нет описания"
-        
-        # Находим первый неслужебный, непустой строковый элемент
         for line in full_desc.split('\n'):
             line = line.strip()
-            if not line:
-                continue
-
-            # Проверяем, начинается ли строка с игнорируемых префиксов
+            if not line: continue
             is_service_line = False
             for prefix in PREFIXES_TO_IGNORE:
                 if line.startswith(prefix):
                     is_service_line = True
                     break
-            
             if not is_service_line:
                 display_text = line
                 break
         
-        # Обрезание текста для кнопки
         if len(display_text) > 40:
             display_text = display_text[:37] + "..."
 
-        # callback: del_post_<index>
-        buttons.append([
-            InlineKeyboardButton(
-                text=f"🗑️ {display_text}",
-                callback_data=f"del_post_{i}"
-            )
-        ])
+        buttons.append([InlineKeyboardButton(text=f"🗑️ {display_text}", callback_data=f"del_post_{i}")])
         
-    buttons.append([
-        InlineKeyboardButton(text="🏠 На главную", callback_data="start")
-    ])
-
+    buttons.append([InlineKeyboardButton(text="🏠 На главную", callback_data="start")])
     return InlineKeyboardMarkup(inline_keyboard=buttons)
 
 
 def get_delete_confirmation_keyboard(post_index: int) -> InlineKeyboardMarkup:
-    """Клавиатура для финального подтверждения удаления."""
     return InlineKeyboardMarkup(inline_keyboard=[
-        [
-            InlineKeyboardButton(text="✅ Удалить навсегда", callback_data=f"confirm_del_{post_index}"),
-        ],
-        [
-            InlineKeyboardButton(text="❌ Отменить", callback_data=f"cancel_del_{post_index}"),
-        ]
+        [InlineKeyboardButton(text="✅ Удалить навсегда", callback_data=f"confirm_del_{post_index}")],
+        [InlineKeyboardButton(text="❌ Отменить", callback_data=f"cancel_del_{post_index}")]
     ])
