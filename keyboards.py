@@ -15,7 +15,8 @@ main_menu_keyboard = InlineKeyboardMarkup(inline_keyboard=[
         InlineKeyboardButton(text="🛠️ Поддержка", callback_data="info_support")
     ],
     [
-        InlineKeyboardButton(text="📣 Заказать рекламу", callback_data="info_adv")
+        # 👇 ЗМІНЕНО ТУТ 👇
+        InlineKeyboardButton(text="📣 Реклама/Платные посты", callback_data="info_adv")
     ],
     [
         InlineKeyboardButton(text="🗑️ Удалить пост", callback_data="info_delete")
@@ -63,21 +64,20 @@ main_menu_return_keyboard = InlineKeyboardMarkup(inline_keyboard=[
     [InlineKeyboardButton(text="🏠 На главную", callback_data="start")]
 ])
 
-# 🔥 КЛАВИАТУРА ДЛЯ ПЕРЕНАПРАВЛЕНИЯ НА РЕКЛАМУ 🔥
+# --- 7. Клавиатура для перенаправления на рекламу (при отказе ИИ) ---
 ad_rejection_keyboard = InlineKeyboardMarkup(inline_keyboard=[
     [InlineKeyboardButton(text="📣 Узнать цены на рекламу", callback_data="info_adv")],
     [InlineKeyboardButton(text="🏠 На главную", callback_data="start")]
 ])
-# ------------------------------------------------
 
-# --- 7. Модерация ---
+# --- 8. Модерация ---
 def get_moderation_keyboard(ad_id):
     return InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text="✅ Одобрить", callback_data=f"approve_{ad_id}")],
         [InlineKeyboardButton(text="❌ Отклонить", callback_data=f"reject_{ad_id}")]
     ])
 
-# --- 8. Реклама (контакт) ---
+# --- 9. Реклама (контакт) ---
 adv_contact_keyboard = InlineKeyboardMarkup(inline_keyboard=[
     [
         InlineKeyboardButton(
@@ -93,7 +93,7 @@ adv_contact_keyboard = InlineKeyboardMarkup(inline_keyboard=[
     ]
 ])
 
-# --- 9. Удаление ---
+# --- 10. Удаление ---
 
 def get_user_posts_keyboard(user_id: int, published_storage: dict) -> InlineKeyboardMarkup:
     posts = published_storage.get(user_id, [])
