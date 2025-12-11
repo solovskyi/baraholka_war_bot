@@ -59,7 +59,7 @@ SYSTEM_PROMPT = """
 """
 
 model = genai.GenerativeModel(
-    model_name="gemini-2.0-flash-live",
+    model_name="gemini-2.5-flash",
     system_instruction=SYSTEM_PROMPT,
     generation_config={"response_mime_type": "application/json"} 
 )
